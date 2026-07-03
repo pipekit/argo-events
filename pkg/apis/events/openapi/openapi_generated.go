@@ -1975,6 +1975,19 @@ func schema_pkg_apis_events_v1alpha1_CustomTrigger(ref common.ReferenceCallback)
 							},
 						},
 					},
+					"authToken": {
+						SchemaProps: spec.SchemaProps{
+							Description: "AuthToken refers to the secret that contains the auth token to authenticate with the custom trigger gRPC server. The token is sent on every request as gRPC metadata in the header named by AuthHeader, in the form \"Bearer <token>\".",
+							Ref:         ref("k8s.io/api/core/v1.SecretKeySelector"),
+						},
+					},
+					"authHeader": {
+						SchemaProps: spec.SchemaProps{
+							Description: "AuthHeader is the name of the gRPC metadata header used to send the AuthToken. It defaults to \"authorization\" when not set. It is only used when AuthToken is set.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
 				},
 				Required: []string{"serverURL", "secure", "spec", "payload"},
 			},

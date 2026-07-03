@@ -663,6 +663,14 @@ type CustomTrigger struct {
 	Parameters []TriggerParameter `json:"parameters,omitempty" protobuf:"bytes,6,rep,name=parameters"`
 	// Payload is the list of key-value extracted from an event payload to construct the request payload.
 	Payload []TriggerParameter `json:"payload" protobuf:"bytes,7,rep,name=payload"`
+	// AuthToken refers to the secret that contains the auth token to authenticate with the custom trigger gRPC server.
+	// The token is sent on every request as gRPC metadata in the header named by AuthHeader, in the form "Bearer <token>".
+	// +optional
+	AuthToken *corev1.SecretKeySelector `json:"authToken,omitempty" protobuf:"bytes,8,opt,name=authToken"`
+	// AuthHeader is the name of the gRPC metadata header used to send the AuthToken.
+	// It defaults to "authorization" when not set. It is only used when AuthToken is set.
+	// +optional
+	AuthHeader string `json:"authHeader,omitempty" protobuf:"bytes,9,opt,name=authHeader"`
 }
 
 // EmailTrigger refers to the specification of the email notification trigger.

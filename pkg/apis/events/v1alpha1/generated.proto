@@ -781,6 +781,16 @@ message CustomTrigger {
 
   // Payload is the list of key-value extracted from an event payload to construct the request payload.
   repeated TriggerParameter payload = 7;
+
+  // AuthToken refers to the secret that contains the auth token to authenticate with the custom trigger gRPC server.
+  // The token is sent on every request as gRPC metadata in the header named by AuthHeader, in the form "Bearer <token>".
+  // +optional
+  optional .k8s.io.api.core.v1.SecretKeySelector authToken = 8;
+
+  // AuthHeader is the name of the gRPC metadata header used to send the AuthToken.
+  // It defaults to "authorization" when not set. It is only used when AuthToken is set.
+  // +optional
+  optional string authHeader = 9;
 }
 
 // DataFilter describes constraints and filters for event data.

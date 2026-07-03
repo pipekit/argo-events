@@ -4998,6 +4998,51 @@ construct the request payload.
 
 </tr>
 
+<tr>
+
+<td>
+
+<code>authToken</code></br> <em>
+<a href="https://v1-18.docs.kubernetes.io/docs/reference/generated/kubernetes-api/v1.18/#secretkeyselector-v1-core">
+Kubernetes core/v1.SecretKeySelector </a> </em>
+</td>
+
+<td>
+
+<em>(Optional)</em>
+<p>
+
+AuthToken refers to the secret that contains the auth token to
+authenticate with the custom trigger gRPC server. The token is sent on
+every request as gRPC metadata in the header named by AuthHeader, in the
+form “Bearer <token>”.
+</p>
+
+</td>
+
+</tr>
+
+<tr>
+
+<td>
+
+<code>authHeader</code></br> <em> string </em>
+</td>
+
+<td>
+
+<em>(Optional)</em>
+<p>
+
+AuthHeader is the name of the gRPC metadata header used to send the
+AuthToken. It defaults to “authorization” when not set. It is only used
+when AuthToken is set.
+</p>
+
+</td>
+
+</tr>
+
 </tbody>
 
 </table>

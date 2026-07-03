@@ -19,6 +19,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strings"
 
 	"github.com/ghodss/yaml"
 	"go.uber.org/zap"
@@ -33,6 +34,29 @@ import (
 	"github.com/argoproj/argo-events/pkg/shared/logging"
 	sharedutil "github.com/argoproj/argo-events/pkg/shared/util"
 )
+
+const defaultAuthHeader = "authorization"
+
+type bearerToken struct {
+	header                   string
+	token                    string
+	requireTransportSecurity bool
+}
+
+func (b bearerToken) GetRequestMetadata(ctx context.Context, uri ...string) (map[string]string, error) {
+	header := b.header
+	if header == "" {
+		header = defaultAuthHeader
+	}
+
+	return map[string]string{
+		strings.ToLower(header): "Bearer " + b.token,
+	}, nil
+}
+
+func (b bearerToken) RequireTransportSecurity() bool {
+	return b.requireTransportSecurity
+}
 
 // CustomTrigger implements Trigger interface for custom trigger resource
 type CustomTrigger struct {
@@ -90,6 +114,17 @@ func NewCustomTrigger(sensor *v1alpha1.Sensor, trigger *v1alpha1.Trigger, logger
 			return nil, err
 		}
 		opt = append(opt, grpc.WithTransportCredentials(creds))
+	}
+
+	if ct.AuthToken != nil {
+		token, err := sharedutil.GetSecretFromVolume(ct.AuthToken)
+		if err != nil {
+			return nil, fmt.Errorf("failed to retrieve the auth token, %w", err)
+		}
+		if !ct.Secure {
+			logger.Warn("sending the auth token over an insecure connection, consider enabling 'secure' to protect the credentials in transit")
+		}
+		opt = append(opt, grpc.WithPerRPCCredentials(bearerToken{header: ct.AuthHeader, token: token, requireTransportSecurity: ct.Secure}))
 	}
 
 	conn, err := grpc.NewClient(

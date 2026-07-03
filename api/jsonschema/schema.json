@@ -950,6 +950,14 @@
     "io.argoproj.events.v1alpha1.CustomTrigger": {
       "description": "CustomTrigger refers to the specification of the custom trigger.",
       "properties": {
+        "authHeader": {
+          "description": "AuthHeader is the name of the gRPC metadata header used to send the AuthToken. It defaults to \"authorization\" when not set. It is only used when AuthToken is set.",
+          "type": "string"
+        },
+        "authToken": {
+          "$ref": "#/definitions/io.k8s.api.core.v1.SecretKeySelector",
+          "description": "AuthToken refers to the secret that contains the auth token to authenticate with the custom trigger gRPC server. The token is sent on every request as gRPC metadata in the header named by AuthHeader, in the form \"Bearer \u003ctoken\u003e\"."
+        },
         "certSecret": {
           "$ref": "#/definitions/io.k8s.api.core.v1.SecretKeySelector",
           "description": "CertSecret refers to the secret that contains cert for secure connection between sensor and custom trigger gRPC server."
