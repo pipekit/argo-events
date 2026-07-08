@@ -17,6 +17,7 @@ package customtrigger
 
 import (
 	"context"
+	"crypto/tls"
 	"encoding/json"
 	"fmt"
 	"strings"
@@ -98,20 +99,22 @@ func NewCustomTrigger(sensor *v1alpha1.Sensor, trigger *v1alpha1.Trigger, logger
 	}
 
 	if ct.Secure {
-		var certFilePath string
-		var err error
+		var creds credentials.TransportCredentials
 		switch {
 		case ct.CertSecret != nil:
-			certFilePath, err = sharedutil.GetSecretVolumePath(ct.CertSecret)
+			certFilePath, err := sharedutil.GetSecretVolumePath(ct.CertSecret)
+			if err != nil {
+				return nil, err
+			}
+			creds, err = credentials.NewClientTLSFromFile(certFilePath, ct.ServerNameOverride)
 			if err != nil {
 				return nil, err
 			}
 		default:
-			return nil, fmt.Errorf("invalid config, CERT secret not defined")
-		}
-		creds, err := credentials.NewClientTLSFromFile(certFilePath, ct.ServerNameOverride)
-		if err != nil {
-			return nil, err
+			creds = credentials.NewTLS(&tls.Config{
+				ServerName: ct.ServerNameOverride,
+				MinVersion: tls.VersionTLS12,
+			})
 		}
 		opt = append(opt, grpc.WithTransportCredentials(creds))
 	}
