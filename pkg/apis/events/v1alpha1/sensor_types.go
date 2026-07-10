@@ -654,6 +654,8 @@ type CustomTrigger struct {
 	// Secure refers to type of the connection between sensor to custom trigger gRPC
 	Secure bool `json:"secure" protobuf:"varint,2,opt,name=secure"`
 	// CertSecret refers to the secret that contains cert for secure connection between sensor and custom trigger gRPC server.
+	// When Secure is true and CertSecret is not set, the server certificate is verified against the system's public CA pool.
+	// +optional
 	CertSecret *corev1.SecretKeySelector `json:"certSecret,omitempty" protobuf:"bytes,3,opt,name=certSecret"`
 	// ServerNameOverride for the secure connection between sensor and custom trigger gRPC server.
 	ServerNameOverride string `json:"serverNameOverride,omitempty" protobuf:"bytes,4,opt,name=serverNameOverride"`
