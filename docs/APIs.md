@@ -4903,10 +4903,13 @@ Kubernetes core/v1.SecretKeySelector </a> </em>
 
 <td>
 
+<em>(Optional)</em>
 <p>
 
 CertSecret refers to the secret that contains cert for secure connection
-between sensor and custom trigger gRPC server.
+between sensor and custom trigger gRPC server. When Secure is true and
+CertSecret is not set, the server certificate is verified against the
+system’s public CA pool.
 </p>
 
 </td>

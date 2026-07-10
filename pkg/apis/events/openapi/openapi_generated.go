@@ -1920,7 +1920,7 @@ func schema_pkg_apis_events_v1alpha1_CustomTrigger(ref common.ReferenceCallback)
 					},
 					"certSecret": {
 						SchemaProps: spec.SchemaProps{
-							Description: "CertSecret refers to the secret that contains cert for secure connection between sensor and custom trigger gRPC server.",
+							Description: "CertSecret refers to the secret that contains cert for secure connection between sensor and custom trigger gRPC server. When Secure is true and CertSecret is not set, the server certificate is verified against the system's public CA pool.",
 							Ref:         ref("k8s.io/api/core/v1.SecretKeySelector"),
 						},
 					},
