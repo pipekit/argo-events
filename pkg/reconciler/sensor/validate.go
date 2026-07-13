@@ -429,11 +429,6 @@ func validateCustomTrigger(trigger *v1alpha1.CustomTrigger) error {
 	if trigger.Spec == nil {
 		return fmt.Errorf("trigger body can't be empty")
 	}
-	if trigger.Secure {
-		if trigger.CertSecret == nil {
-			return fmt.Errorf("certSecret can't be nil when the trigger server connection is secure")
-		}
-	}
 	if trigger.Parameters != nil {
 		for i, parameter := range trigger.Parameters {
 			if err := validateTriggerParameter(&parameter); err != nil {

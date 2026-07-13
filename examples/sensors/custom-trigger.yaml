@@ -13,6 +13,15 @@ spec:
         custom:
           # the url of the trigger server.
           serverURL: tekton-trigger.argo-events.svc:9000
+          # authToken (optional) references a secret key holding a token used to authenticate
+          # with the trigger server. It is sent on every request as gRPC metadata in the
+          # form "Bearer <token>". Enable `secure` to protect the token in transit.
+          authToken:
+            name: custom-trigger-secret
+            key: token
+          # authHeader (optional) is the gRPC metadata header used to send the authToken.
+          # It defaults to "authorization" when not set.
+          authHeader: authorization
           # spec is map of string->string and it is sent over to trigger server.
           # the spec can be anything you want as per your use-case, just make sure the trigger server understands the spec map.
           spec:

@@ -1019,6 +1019,11 @@ func (in *CustomTrigger) DeepCopyInto(out *CustomTrigger) {
 			(*in)[i].DeepCopyInto(&(*out)[i])
 		}
 	}
+	if in.AuthToken != nil {
+		in, out := &in.AuthToken, &out.AuthToken
+		*out = new(v1.SecretKeySelector)
+		(*in).DeepCopyInto(*out)
+	}
 	return
 }
 

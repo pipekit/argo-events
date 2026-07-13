@@ -92,6 +92,12 @@ The most important fields are,
 
 1. `payload`: Payload to send to the trigger server. Read more on payload [here](https://argoproj.github.io/argo-events/sensors/triggers/http-trigger/#request-payload).
 
+1. `authToken`: An optional reference to a secret key holding a token used to authenticate with the trigger
+   server. When set, the token is sent on every request as gRPC metadata in the form `Bearer <token>`.
+   Enable `secure` to protect the token in transit.
+
+1. `authHeader`: The gRPC metadata header used to send the `authToken`. Defaults to `authorization` when not set.
+
 The complete spec for the custom trigger is available [here](../../APIs.md#argoproj.io/v1alpha1.CustomTrigger).
 
 ## Custom Trigger in Action

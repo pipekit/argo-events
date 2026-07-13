@@ -14,3 +14,33 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 package customtrigger
+
+import (
+	"context"
+	"testing"
+
+	"github.com/stretchr/testify/assert"
+)
+
+func TestBearerToken_GetRequestMetadata(t *testing.T) {
+	t.Run("defaults to the authorization header", func(t *testing.T) {
+		b := bearerToken{token: "my-secret-token", requireTransportSecurity: true}
+
+		md, err := b.GetRequestMetadata(context.Background())
+		assert.NoError(t, err)
+		assert.Equal(t, map[string]string{"authorization": "Bearer my-secret-token"}, md)
+	})
+
+	t.Run("uses a custom header, lowercased", func(t *testing.T) {
+		b := bearerToken{header: "X-Api-Key", token: "my-secret-token"}
+
+		md, err := b.GetRequestMetadata(context.Background())
+		assert.NoError(t, err)
+		assert.Equal(t, map[string]string{"x-api-key": "Bearer my-secret-token"}, md)
+	})
+}
+
+func TestBearerToken_RequireTransportSecurity(t *testing.T) {
+	assert.True(t, bearerToken{requireTransportSecurity: true}.RequireTransportSecurity())
+	assert.False(t, bearerToken{requireTransportSecurity: false}.RequireTransportSecurity())
+}

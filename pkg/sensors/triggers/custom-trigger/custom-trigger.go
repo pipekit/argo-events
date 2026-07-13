@@ -17,8 +17,12 @@ package customtrigger
 
 import (
 	"context"
+	"crypto/tls"
 	"encoding/json"
 	"fmt"
+	"strconv"
+	"strings"
+	"time"
 
 	"github.com/ghodss/yaml"
 	"go.uber.org/zap"
@@ -26,6 +30,8 @@ import (
 	"google.golang.org/grpc/connectivity"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/grpc/keepalive"
+	"google.golang.org/grpc/metadata"
 	"k8s.io/apimachinery/pkg/util/wait"
 
 	"github.com/argoproj/argo-events/pkg/apis/events/v1alpha1"
@@ -33,6 +39,35 @@ import (
 	"github.com/argoproj/argo-events/pkg/shared/logging"
 	sharedutil "github.com/argoproj/argo-events/pkg/shared/util"
 )
+
+const defaultAuthHeader = "authorization"
+
+const (
+	headerSensorName      = "x-argo-events-sensor"
+	headerTriggerName     = "x-argo-events-trigger"
+	headerActionTimestamp = "x-argo-events-action-timestamp"
+)
+
+type bearerToken struct {
+	header                   string
+	token                    string
+	requireTransportSecurity bool
+}
+
+func (b bearerToken) GetRequestMetadata(ctx context.Context, uri ...string) (map[string]string, error) {
+	header := b.header
+	if header == "" {
+		header = defaultAuthHeader
+	}
+
+	return map[string]string{
+		strings.ToLower(header): "Bearer " + b.token,
+	}, nil
+}
+
+func (b bearerToken) RequireTransportSecurity() bool {
+	return b.requireTransportSecurity
+}
 
 // CustomTrigger implements Trigger interface for custom trigger resource
 type CustomTrigger struct {
@@ -71,25 +106,43 @@ func NewCustomTrigger(sensor *v1alpha1.Sensor, trigger *v1alpha1.Trigger, logger
 
 	opt := []grpc.DialOption{
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
+		grpc.WithKeepaliveParams(keepalive.ClientParameters{
+			Time:                5 * time.Minute,
+			Timeout:             20 * time.Second,
+			PermitWithoutStream: true,
+		}),
 	}
 
 	if ct.Secure {
-		var certFilePath string
-		var err error
+		var creds credentials.TransportCredentials
 		switch {
 		case ct.CertSecret != nil:
-			certFilePath, err = sharedutil.GetSecretVolumePath(ct.CertSecret)
+			certFilePath, err := sharedutil.GetSecretVolumePath(ct.CertSecret)
+			if err != nil {
+				return nil, err
+			}
+			creds, err = credentials.NewClientTLSFromFile(certFilePath, ct.ServerNameOverride)
 			if err != nil {
 				return nil, err
 			}
 		default:
-			return nil, fmt.Errorf("invalid config, CERT secret not defined")
-		}
-		creds, err := credentials.NewClientTLSFromFile(certFilePath, ct.ServerNameOverride)
-		if err != nil {
-			return nil, err
+			creds = credentials.NewTLS(&tls.Config{
+				ServerName: ct.ServerNameOverride,
+				MinVersion: tls.VersionTLS12,
+			})
 		}
 		opt = append(opt, grpc.WithTransportCredentials(creds))
+	}
+
+	if ct.AuthToken != nil {
+		token, err := sharedutil.GetSecretFromVolume(ct.AuthToken)
+		if err != nil {
+			return nil, fmt.Errorf("failed to retrieve the auth token, %w", err)
+		}
+		if !ct.Secure {
+			logger.Warn("sending the auth token over an insecure connection, consider enabling 'secure' to protect the credentials in transit")
+		}
+		opt = append(opt, grpc.WithPerRPCCredentials(bearerToken{header: ct.AuthHeader, token: token, requireTransportSecurity: ct.Secure}))
 	}
 
 	conn, err := grpc.NewClient(
@@ -139,7 +192,7 @@ func (ct *CustomTrigger) FetchResource(ctx context.Context) (interface{}, error)
 
 	ct.Logger.Debugw("trigger spec body", zap.Any("spec", string(specBody)))
 
-	resource, err := ct.triggerClient.FetchResource(context.Background(), &triggers.FetchResourceRequest{
+	resource, err := ct.triggerClient.FetchResource(ctx, &triggers.FetchResourceRequest{
 		Resource: specBody,
 	})
 	if err != nil {
@@ -200,7 +253,13 @@ func (ct *CustomTrigger) Execute(ctx context.Context, events map[string]*v1alpha
 		ct.Logger.Debugw("payload for the trigger execution", zap.Any("payload", string(payload)))
 	}
 
-	result, err := ct.triggerClient.Execute(context.Background(), &triggers.ExecuteRequest{
+	ctx = metadata.AppendToOutgoingContext(ctx,
+		headerSensorName, ct.Sensor.Name,
+		headerTriggerName, ct.Trigger.Template.Name,
+		headerActionTimestamp, strconv.FormatInt(time.Now().UnixMilli(), 10),
+	)
+
+	result, err := ct.triggerClient.Execute(ctx, &triggers.ExecuteRequest{
 		Resource: obj,
 		Payload:  payload,
 	})
