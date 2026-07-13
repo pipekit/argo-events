@@ -20,7 +20,9 @@ import (
 	"crypto/tls"
 	"encoding/json"
 	"fmt"
+	"strconv"
 	"strings"
+	"time"
 
 	"github.com/ghodss/yaml"
 	"go.uber.org/zap"
@@ -28,6 +30,7 @@ import (
 	"google.golang.org/grpc/connectivity"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/grpc/metadata"
 	"k8s.io/apimachinery/pkg/util/wait"
 
 	"github.com/argoproj/argo-events/pkg/apis/events/v1alpha1"
@@ -37,6 +40,14 @@ import (
 )
 
 const defaultAuthHeader = "authorization"
+
+const triggerRPCTimeout = 30 * time.Second
+
+const (
+	headerSensorName      = "x-argo-events-sensor"
+	headerTriggerName     = "x-argo-events-trigger"
+	headerActionTimestamp = "x-argo-events-action-timestamp"
+)
 
 type bearerToken struct {
 	header                   string
@@ -177,7 +188,7 @@ func (ct *CustomTrigger) FetchResource(ctx context.Context) (interface{}, error)
 
 	ct.Logger.Debugw("trigger spec body", zap.Any("spec", string(specBody)))
 
-	resource, err := ct.triggerClient.FetchResource(context.Background(), &triggers.FetchResourceRequest{
+	resource, err := ct.triggerClient.FetchResource(ctx, &triggers.FetchResourceRequest{
 		Resource: specBody,
 	})
 	if err != nil {
@@ -238,7 +249,13 @@ func (ct *CustomTrigger) Execute(ctx context.Context, events map[string]*v1alpha
 		ct.Logger.Debugw("payload for the trigger execution", zap.Any("payload", string(payload)))
 	}
 
-	result, err := ct.triggerClient.Execute(context.Background(), &triggers.ExecuteRequest{
+	ctx = metadata.AppendToOutgoingContext(ctx,
+		headerSensorName, ct.Sensor.Name,
+		headerTriggerName, ct.Trigger.Template.Name,
+		headerActionTimestamp, strconv.FormatInt(time.Now().UnixMilli(), 10),
+	)
+
+	result, err := ct.triggerClient.Execute(ctx, &triggers.ExecuteRequest{
 		Resource: obj,
 		Payload:  payload,
 	})
