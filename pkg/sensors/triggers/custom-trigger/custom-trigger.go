@@ -41,8 +41,6 @@ import (
 
 const defaultAuthHeader = "authorization"
 
-const triggerRPCTimeout = 30 * time.Second
-
 const (
 	headerSensorName      = "x-argo-events-sensor"
 	headerTriggerName     = "x-argo-events-trigger"
